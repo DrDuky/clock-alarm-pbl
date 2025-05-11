@@ -42,9 +42,9 @@ bool hi = true;
 // Buzzer beep
 void ringBuzzer() {
   digitalWrite(buzzerPin, HIGH);
-  delay(200);
+  delay(750);
   digitalWrite(buzzerPin, LOW);
-  delay(200);
+  delay(750);
   digitalWrite(buzzerPin, HIGH);
 }
 
@@ -222,6 +222,7 @@ void loop() {
             hi = true;
           }
         }
+        ringBuzzer();
         if (key != NO_KEY && key == '#') {
           alarmTriggered = false;
           alarmSet = false;
