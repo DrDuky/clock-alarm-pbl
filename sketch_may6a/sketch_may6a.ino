@@ -31,11 +31,12 @@ unsigned long lastCountdownUpdate = 0;
 unsigned long starTime = 0;
 bool starOnce = false;
 
-int hours;
-int minutes;
-
 byte cursor_x = 0;
 byte cursor_y = 0;
+
+unsigned long previousMillis = 0;
+const long interval = 1000;
+bool hi = true;
 
 
 // Buzzer beep
@@ -63,13 +64,15 @@ void ShowTime(int hour, int minute, int second) {
 
 // Prompt user to enter MMSS and set countdown
 void setAlarm() {
+  int hours;
+  int minutes;
   lcd.clear();
   lcd.setCursor(1, 0);
   lcd.print("Enter time for");
   lcd.setCursor(0, 1);
   lcd.print("alarm (HOUR:MIN)");
 
-  delay(2000);
+  delay(1250);
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("v       move: *");
@@ -127,7 +130,7 @@ void setAlarm() {
         Serial.println(minutes);
         if (hours > 24 || minutes > 60) {
           lcd.clear();
-          lcd.setCursor(3, 0);
+          lcd.setCursor(2, 0);
           lcd.print("invalid time");
           delay(1500);
           lcd.clear();
@@ -143,26 +146,27 @@ void setAlarm() {
           lcd.setCursor(0, 1);
           lcd.print("00:00  enter: #");
           cursor_x = 0;
+          input = "";
         } else break;
       }
     }
   }
 
-alarmHour = hours;
-alarmMinute = minutes;
-alarmSet = true;
+  alarmHour = hours;
+  alarmMinute = minutes;
+  alarmSet = true;
 
-lcd.clear();
-lcd.setCursor(0, 0);
-lcd.print("Alarm set for:");
-lcd.setCursor(0, 1);
-if (alarmHour < 10) lcd.print("0");
-lcd.print(alarmHour);
-lcd.print(":");
-if (alarmMinute < 10) lcd.print("0");
-lcd.print(alarmMinute);
-delay(2000);
-lcd.clear();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Alarm set for:");
+  lcd.setCursor(0, 1);
+  if (alarmHour < 10) lcd.print("0");
+  lcd.print(alarmHour);
+  lcd.print(":");
+  if (alarmMinute < 10) lcd.print("0");
+  lcd.print(alarmMinute);
+  delay(2000);
+  lcd.clear();
 }
 void movecursor() {
   if (cursor_x == 2) {
@@ -197,53 +201,68 @@ void loop() {
 
   ShowTime(hour, minute, seconds);
 
+  if (alarmSet && !alarmTriggered) {
+    if (hour == alarmHour && minute == alarmMinute) {
+      alarmTriggered = true;
+      alarmSet = false;
+      while (true) {
+        char key = keypad.getKey();
+        unsigned long currentMillis = millis();
+        if (currentMillis - previousMillis >= interval) {
+          previousMillis = currentMillis;
+          if (hi) {
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print("! ALARM ACTIVE !");
+            lcd.setCursor(0, 1);
+            lcd.print(" Stop alarm: #");
+            hi = false;
+          } else {
+            lcd.clear();
+            hi = true;
+          }
+        }
+        if (key != NO_KEY && key == '#') {
+          alarmTriggered = false;
+          alarmSet = false;
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print(" Alarm  stopped");
+          delay(750);
+          lcd.clear();
 
- if (alarmSet && !alarmTriggered) {
-  if (hour == alarmHour && minute == alarmMinute) {
-    alarmTriggered = true;
-    alarmSet = false;
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("!! ALARM ACTIVE !!");
+          break;
+        }
+      }
+
+    } else {
+      int currentTotal = hour * 60 + minute;
+      int alarmTotal = alarmHour * 60 + alarmMinute;
+      int diff = alarmTotal - currentTotal;
+      if (diff < 0) diff += 24 * 60;  // if alarm is next day
+
+      int hLeft = diff / 60;
+      int mLeft = diff % 60;
+
+      lcd.setCursor(0, 1);
+      lcd.print(" Left: ");
+      if (hLeft < 10) lcd.print("0");
+      lcd.print(hLeft);
+      lcd.print(":");
+      if (mLeft < 10) lcd.print("0");
+      lcd.print(mLeft);
+      lcd.print("   ");
+    }
+  } else if (!alarmTriggered) {
     lcd.setCursor(0, 1);
-    lcd.print(" Stop alarm: #");
-  } else {
-    int currentTotal = hour * 60 + minute;
-    int alarmTotal = alarmHour * 60 + alarmMinute;
-    int diff = alarmTotal - currentTotal;
-    if (diff < 0) diff += 24 * 60; // if alarm is next day
-
-    int hLeft = diff / 60;
-    int mLeft = diff % 60;
-
-    lcd.setCursor(0, 1);
-    lcd.print(" Left: ");
-    if (hLeft < 10) lcd.print("0");
-    lcd.print(hLeft);
-    lcd.print(":");
-    if (mLeft < 10) lcd.print("0");
-    lcd.print(mLeft);
-    lcd.print("   ");
+    lcd.print(" Set alarm: *   ");
   }
-} else if (!alarmTriggered) {
-  lcd.setCursor(0, 1);
-  lcd.print(" Set alarm: *   ");
-}
   // Keypad input
   char key = keypad.getKey();
   if (key != NO_KEY) {
     Serial.println(key);
     if (key == '*') {
       setAlarm();
-    }
-
-    if (alarmTriggered && key == '#') {
-      alarmTriggered = false;
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print(" Alarm  stopped");
-      delay(1000);
-      lcd.clear();
     }
   }
 
