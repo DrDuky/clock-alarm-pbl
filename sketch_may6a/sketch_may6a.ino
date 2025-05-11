@@ -29,6 +29,14 @@ unsigned long alarmStartTime = 0;
 unsigned long alarmDuration = 0;
 unsigned long lastCountdownUpdate = 0;
 
+int hours;
+int minutes;
+
+byte cursor_x = 0;
+byte cursor_y = 0;
+
+
+
 // Buzzer beep
 void ringBuzzer() {
   digitalWrite(buzzerPin, HIGH);
@@ -55,34 +63,140 @@ void ShowTime(int hour, int minute, int second) {
 // Prompt user to enter MMSS and set countdown
 void setAlarm() {
   lcd.clear();
+  lcd.setCursor(1, 0);
+  lcd.print("Enter time for");
+  lcd.setCursor(0, 1);
+  lcd.print("alarm (HOUR:MIN)");
+
+  delay(1000);
+  lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print(" Enter MMSS:");
+  lcd.print("v       move: *");
+  lcd.setCursor(0, 1);
+  lcd.print("00:00  enter: #");
 
   String input = "";
-  while (input.length() < 4) {
+  int numbers[4] = { 0, 0, 0, 0 };
+
+  while (true) {
     char key = keypad.getKey();
-    if (key != NO_KEY && isDigit(key)) {
-      input += key;
-      lcd.setCursor(input.length() - 1, 1);
-      lcd.print(key);
+    //lcd.setCursor(cursor_x, cursor_y);
+    if (key != NO_KEY) {
+      if (isDigit(key)) {
+        lcd.setCursor(cursor_x, 0);
+        lcd.print(" ");
+
+        lcd.setCursor(cursor_x, 1);
+        lcd.print(key);
+        switch (cursor_x) {
+          case 0:
+            Serial.println(key);
+            numbers[0] = key - '0';
+            break;
+          case 1:
+            Serial.println(key);
+            numbers[1] = key - '0';
+            break;
+          case 3:
+            Serial.println(key);
+            numbers[2] = key - '0';
+            break;
+          case 4:
+            Serial.println(key);
+            numbers[3] = key - '0';
+            break;
+        }
+        cursor_x++;
+        movecursor();
+      } else if (key == '*') {
+        lcd.setCursor(cursor_x, 0);
+        lcd.print(" ");
+
+        cursor_x++;
+        movecursor();
+      } else if (key == '#') {
+        for (int i = 0; i < 4; i++) {
+          input = input + numbers[i];
+        }
+        hours = input.substring(0, 2).toInt();
+        minutes = input.substring(2, 4).toInt();
+        Serial.println("lol");
+
+        Serial.println(hours);
+        Serial.println(minutes);
+        if (hours > 24 || minutes > 60) {
+          lcd.clear();
+          lcd.setCursor(3, 0);
+          lcd.print("invalid time");
+          delay(1500);
+          lcd.clear();
+          lcd.setCursor(1, 0);
+          lcd.print("Enter time for");
+          lcd.setCursor(0, 1);
+          lcd.print("alarm (HOUR:MIN)");
+
+          delay(1000);
+          lcd.clear();
+          lcd.setCursor(0, 0);
+          lcd.print("v       move: *");
+          lcd.setCursor(0, 1);
+          lcd.print("00:00  enter: #");
+          cursor_x = 0;
+        } else break;
+      }
     }
   }
 
-  int minutes = input.substring(0, 2).toInt();
-  int seconds = input.substring(2, 4).toInt();
-  alarmDuration = (minutes * 60UL + seconds) * 1000UL;
+  DateTime now = rtc.now();
+  int seconds = now.second();
+  int minute = now.minute();
+  int hour = now.hour();
+
+  long alarmSeconds = ((long)hours * 3600) + ((long)minutes * 60);
+  Serial.println(alarmSeconds);
+  long currentSeconds = ((long)hour * 3600) + ((long)minute * 60) + (long)(seconds);
+  Serial.println(currentSeconds);
+  long delaySeconds = alarmSeconds - currentSeconds;
+  Serial.println(delaySeconds);
+  Serial.println(delaySeconds);
+
+  if (delaySeconds <= 0) {
+    Serial.println(delaySeconds);
+    delaySeconds += 24 * 3600;  // Alarm is for the next day
+    Serial.println(delaySeconds);
+  }
+
+  alarmDuration = delaySeconds;
   alarmStartTime = millis();
   countdownActive = true;
 
+
+  /*
   lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Alarm in ");
-  lcd.print(minutes);
-  lcd.print("m ");
-  lcd.print(seconds);
-  lcd.print("s");
-  delay(1500);
+  lcd.setCursor(1, 0);
+  lcd.print("select weekday");
+  lcd.setCursor(1, 1);
+  lcd.print("M<T W T F S S");
+  while(true){
+    char key = keypad.getKey();
+    if (key != NO_KEY && isDigit(key)) {
+      if () {
+        
+      }
+    }
+  }
+  */
+  delay(10000);
   lcd.clear();
+}
+void movecursor() {
+  if (cursor_x == 2) {
+    cursor_x++;
+  } else if (cursor_x >= 5) {
+    cursor_x = 0;
+  }
+  lcd.setCursor(cursor_x, 0);
+  lcd.print('v');
 }
 
 void setup() {
@@ -93,7 +207,8 @@ void setup() {
 
   if (!rtc.begin()) {
     Serial.println("Couldn't find RTC");
-    while (1);
+    while (1)
+      ;
   }
 
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
@@ -107,7 +222,7 @@ void loop() {
 
   ShowTime(hour, minute, seconds);
 
-  // Countdown logic
+
   if (countdownActive) {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - alarmStartTime;
@@ -128,8 +243,8 @@ void loop() {
       int remMin = totalSeconds / 60;
       int remSec = totalSeconds % 60;
 
-      lcd.setCursor(0, 1);
-      lcd.print(" Left: ");
+      lcd.setCursor(1, 1);
+      lcd.print("Left: ");
       if (remMin < 10) lcd.print("0");
       lcd.print(remMin);
       lcd.print(":");
@@ -141,6 +256,7 @@ void loop() {
     lcd.setCursor(0, 1);
     lcd.print(" Set alarm: *   ");
   }
+
 
   // Keypad input
   char key = keypad.getKey();
