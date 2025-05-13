@@ -169,86 +169,86 @@ void setup() {
 
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));  // Sets the current time (once during upload)
 }
-  void loop() {
-    DateTime now = rtc.now();  // Gets current time
-    int hour = now.hour();
-    int minute = now.minute();
-    int seconds = now.second();
+void loop() {
+  DateTime now = rtc.now();  // Gets current time
+  int hour = now.hour();
+  int minute = now.minute();
+  int seconds = now.second();
 
-    ShowTime(hour, minute, seconds);  // Always shows the time
+  ShowTime(hour, minute, seconds);  // Always shows the time
 
-    // If alarm is set and did not get triggered yet
-    if (alarmSet && !alarmTriggered) {
-      // Checks if current time matches alarm time
-      if (hour == alarmHour && minute == alarmMinute) {
-        alarmTriggered = true;
-        alarmSet = false;
+  // If alarm is set and did not get triggered yet
+  if (alarmSet && !alarmTriggered) {
+    // Checks if current time matches alarm time
+    if (hour == alarmHour && minute == alarmMinute) {
+      alarmTriggered = true;
+      alarmSet = false;
 
-        // Alarm loop (Shows blinking message and buzzer)
-        while (true) {
-          char key = keypad.getKey();
-          unsigned long currentMillis = millis();
+      // Alarm loop (Shows blinking message and buzzer)
+      while (true) {
+        char key = keypad.getKey();
+        unsigned long currentMillis = millis();
 
-          if (currentMillis - previousMillis >= interval) {  // blinking message
-            previousMillis = currentMillis;
-            lcd.clear();
-            if (blinkOn) {
-              lcd.setCursor(0, 0);
-              lcd.print("! ALARM ACTIVE !");
-              lcd.setCursor(0, 1);
-              lcd.print(" Stop alarm: #");
-              blinkOn = false;
-            } else {
-              blinkOn = true;
-            }
-          }
-
-          ringBuzzer();  // Sounds the buzzer
-
-          // Stop alarm when # is pressed
-          if (key == '#') {
-            alarmTriggered = false;
-            lcd.clear();
-            lcd.print(" Alarm  stopped");
-            delay(750);
-            lcd.clear();
-            break;
+        if (currentMillis - previousMillis >= interval) {  // blinking message
+          previousMillis = currentMillis;
+          lcd.clear();
+          if (blinkOn) {
+            lcd.setCursor(0, 0);
+            lcd.print("! ALARM ACTIVE !");
+            lcd.setCursor(0, 1);
+            lcd.print(" Stop alarm: #");
+            blinkOn = false;
+          } else {
+            blinkOn = true;
           }
         }
 
-      } else {
-        // Countdown display to alarm
-        int currentTotal = hour * 60 + minute;
-        int alarmTotal = alarmHour * 60 + alarmMinute;
-        int diff = alarmTotal - currentTotal;
-        if (diff < 0) diff += 24 * 60;  // Next-day alarm
+        ringBuzzer();  // Sounds the buzzer
 
-        int hLeft = diff / 60;
-        int mLeft = diff % 60;
-
-        lcd.setCursor(0, 1);
-        lcd.print(" Left: ");
-        if (hLeft < 10) lcd.print("0");
-        lcd.print(hLeft);
-        lcd.print(":");
-        if (mLeft < 10) lcd.print("0");
-        lcd.print(mLeft);
-        lcd.print("   ");
+        // Stop alarm when # is pressed
+        if (key == '#') {
+          alarmTriggered = false;
+          lcd.clear();
+          lcd.print(" Alarm  stopped");
+          delay(750);
+          lcd.clear();
+          break;
+        }
       }
 
-    } else if (!alarmTriggered) {  // Shows default message if no alarm is set
+    } else {
+      // Countdown display to alarm
+      int currentTotal = hour * 60 + minute;
+      int alarmTotal = alarmHour * 60 + alarmMinute;
+      int diff = alarmTotal - currentTotal;
+      if (diff < 0) diff += 24 * 60;  // Next-day alarm
+
+      int hLeft = diff / 60;
+      int mLeft = diff % 60;
+
       lcd.setCursor(0, 1);
-      lcd.print(" Set alarm: *   ");
+      lcd.print(" Left: ");
+      if (hLeft < 10) lcd.print("0");
+      lcd.print(hLeft);
+      lcd.print(":");
+      if (mLeft < 10) lcd.print("0");
+      lcd.print(mLeft);
+      lcd.print("   ");
     }
 
-    // If * is pressed, runs setAlarm()
-    char key = keypad.getKey();
-    if (key == '*') {
-      setAlarm();
-    }
-
-    // Buzzer stays off if alarm not triggered
-    if (!alarmTriggered) {
-      digitalWrite(buzzerPin, LOW);
-    }
+  } else if (!alarmTriggered) {  // Shows default message if no alarm is set
+    lcd.setCursor(0, 1);
+    lcd.print(" Set alarm: *   ");
   }
+
+  // If * is pressed, runs setAlarm()
+  char key = keypad.getKey();
+  if (key == '*') {
+    setAlarm();
+  }
+
+  // Buzzer stays off if alarm not triggered
+  if (!alarmTriggered) {
+    digitalWrite(buzzerPin, LOW);
+  }
+}
