@@ -1,13 +1,13 @@
+// ----------- Libraries -----------
 #include <RTClib.h>         // real-time clock (RTC)
 #include <LiquidCrystal.h>  // LCD screen
 #include "Keypad.h"         // keypad
 
-RTC_DS1307 rtc;  // Creates the RTC object
+// ----------- Objects -----------
+RTC_DS1307 rtc;                          // Creates the RTC object
+LiquidCrystal lcd(7, 8, 9, 10, 11, 12);  // LCD pin setup (RS, Enable, D4, D5, D6, D7)
 
-// LCD pin setup (RS, Enable, D4, D5, D6, D7)
-LiquidCrystal lcd(7, 8, 9, 10, 11, 12);  // Initialize LCD
-
-// Keypad layout and wiring
+// ----------- Keypad Setup -----------
 const byte ROWS = 4;
 const byte COLS = 3;
 char keys[ROWS][COLS] = {
@@ -20,20 +20,23 @@ byte rowPins[ROWS] = { 13, 6, 5, 4 };                                    // row 
 byte colPins[COLS] = { 3, 2, A0 };                                       // column pins of keypad
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);  // Initialize keypad
 
-const int buzzerPin = A1;  // Pin connected to buzzer
-
+// ----------- Buzzer and Alarm Variables -----------
+const int buzzerPin = A1;
 // Alarm-related variables
 bool alarmTriggered = false;
 bool alarmSet = false;
 int alarmHour = 0;
 int alarmMinute = 0;
 
+// ----------- Cursor and Blinking -----------
 byte cursor_x = 0;                 // Cursor (V) position for alarm input on LCD
 unsigned long previousMillis = 0;  // Timer for blinking effect
 const long interval = 1000;
 bool blinkOn = true;  // Used for blinking the LCD text (! ALARM ACTIVE !)
 
-// Defining Buzzer function called ringBuzzer (beep pattern)
+// ========== FUNCTIONS ==========
+
+// --- Sounds the buzzer in a pattern ---
 void ringBuzzer() {
   digitalWrite(buzzerPin, HIGH);
   delay(750);
@@ -42,7 +45,7 @@ void ringBuzzer() {
   digitalWrite(buzzerPin, HIGH);
 }
 
-// Defining the function to show current time on LCD
+// --- Displays the current time on the LCD ---
 void ShowTime(int hour, int minute, int second) {
   lcd.setCursor(0, 0);
   lcd.print(" TIME: ");
@@ -56,7 +59,7 @@ void ShowTime(int hour, int minute, int second) {
   lcd.print(second);
 }
 
-//  the alarm time using keypad
+// --- Lets the user set the alarm time using the keypad ---
 void setAlarm() {
   // Setup variables + initial message
   int hours, minutes;
@@ -147,7 +150,7 @@ void setAlarm() {
   lcd.clear();
 }
 
-// Move input cursor and skip colon (:)
+// --- Moves the arrow cursor for alarm input ---
 void movecursor() {
   if (cursor_x == 2) cursor_x++;         // Skip colon
   else if (cursor_x >= 5) cursor_x = 0;  // Loops back to position 0
@@ -155,6 +158,7 @@ void movecursor() {
   lcd.print('v');  // Prints the arrow symbol on top
 }
 
+// ========== Setup Function ==========
 void setup() {
   lcd.begin(16, 2);  // LCD Setup
   Serial.begin(9600);
@@ -169,6 +173,8 @@ void setup() {
 
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));  // Sets the current time (once during upload)
 }
+
+// ========== Main Loop ==========
 void loop() {
   DateTime now = rtc.now();  // Gets current time
   int hour = now.hour();
